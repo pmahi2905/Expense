@@ -18,6 +18,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://127.0.0.1:5000/auth/google/callback')
+
 db.init_app(app)
 
 login_manager = LoginManager()
@@ -27,6 +28,9 @@ login_manager.login_view = 'login'
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+with app.app_context():
+    db.create_all()
 
 @app.route('/')
 def index():
@@ -97,37 +101,41 @@ def google_callback():
     if not code:
         flash('Google login failed.', 'error')
         return redirect(url_for('login'))
-    token_response = requests.post('https://oauth2.googleapis.com/token', data={
-        'code': code,
-        'client_id': GOOGLE_CLIENT_ID,
-        'client_secret': GOOGLE_CLIENT_SECRET,
-        'redirect_uri': GOOGLE_REDIRECT_URI,
-        'grant_type': 'authorization_code'
-    })
-    token_data = token_response.json()
-    access_token = token_data.get('access_token')
-    if not access_token:
-        flash('Google login failed. Please try again.', 'error')
+    try:
+        token_response = requests.post('https://oauth2.googleapis.com/token', data={
+            'code': code,
+            'client_id': GOOGLE_CLIENT_ID,
+            'client_secret': GOOGLE_CLIENT_SECRET,
+            'redirect_uri': GOOGLE_REDIRECT_URI,
+            'grant_type': 'authorization_code'
+        })
+        token_data = token_response.json()
+        access_token = token_data.get('access_token')
+        if not access_token:
+            flash('Google login failed. Please try again.', 'error')
+            return redirect(url_for('login'))
+        user_info = requests.get('https://www.googleapis.com/oauth2/v2/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'}
+        ).json()
+        google_id = user_info.get('id')
+        email = user_info.get('email')
+        name = user_info.get('name')
+        avatar = user_info.get('picture')
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            user = User(name=name, email=email, google_id=google_id, avatar=avatar)
+            db.session.add(user)
+            db.session.commit()
+        else:
+            user.google_id = google_id
+            user.avatar = avatar
+            db.session.commit()
+        login_user(user)
+        flash(f'Welcome, {name}!', 'success')
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        flash('Google login failed. Please use email login instead.', 'error')
         return redirect(url_for('login'))
-    user_info = requests.get('https://www.googleapis.com/oauth2/v2/userinfo',
-        headers={'Authorization': f'Bearer {access_token}'}
-    ).json()
-    google_id = user_info.get('id')
-    email = user_info.get('email')
-    name = user_info.get('name')
-    avatar = user_info.get('picture')
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        user = User(name=name, email=email, google_id=google_id, avatar=avatar)
-        db.session.add(user)
-        db.session.commit()
-    else:
-        user.google_id = google_id
-        user.avatar = avatar
-        db.session.commit()
-    login_user(user)
-    flash(f'Welcome back, {name}!', 'success')
-    return redirect(url_for('dashboard'))
 
 @app.route('/dashboard')
 @login_required
@@ -245,6 +253,4 @@ def delete_budget(id):
     return redirect(url_for('budgets'))
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
