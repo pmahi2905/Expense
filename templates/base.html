@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Expenzo{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">💰</span>
+                <span class="logo-text">Expenzo</span>
+            </div>
+            <nav class="nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">📊</span> Dashboard
+                </a>
+                <a href="{{ url_for('transactions') }}" class="nav-item {% if request.endpoint == 'transactions' %}active{% endif %}">
+                    <span class="nav-icon">💳</span> Transactions
+                </a>
+                <a href="{{ url_for('budgets') }}" class="nav-item {% if request.endpoint == 'budgets' %}active{% endif %}">
+                    <span class="nav-icon">🎯</span> Budgets
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    {% if current_user.avatar %}
+                        <img src="{{ current_user.avatar }}" class="avatar" alt="avatar">
+                    {% else %}
+                        <div class="avatar-placeholder">{{ current_user.name[0].upper() }}</div>
+                    {% endif %}
+                    <div class="user-details">
+                        <span class="user-name">{{ current_user.name }}</span>
+                        <span class="user-email">{{ current_user.email }}</span>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Sign out</a>
+            </div>
+        </aside>
+        <main class="main">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="flash flash-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% else %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages auth-flash">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        {% block auth_content %}{% endblock %}
+    {% endif %}
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>

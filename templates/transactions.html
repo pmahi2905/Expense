@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Transactions — Expenzo{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Transactions</h2>
+        <p class="subtitle">All your expenses in one place</p>
+    </div>
+    <button class="btn-primary" onclick="toggleModal('addModal')">+ Add Transaction</button>
+</div>
+
+<div class="filter-bar">
+    <span class="filter-label">Filter by:</span>
+    {% for cat in ['', 'Food', 'Transport', 'Shopping', 'Bills', 'Health', 'Entertainment', 'Education', 'Other'] %}
+    <a href="{{ url_for('transactions', category=cat) }}"
+       class="filter-btn {% if category_filter == cat %}active{% endif %}">
+        {{ 'All' if cat == '' else cat }}
+    </a>
+    {% endfor %}
+</div>
+
+<div class="card">
+    {% if transactions %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Date</th>
+                <th>Note</th>
+                <th>Amount</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td>
+                    <div class="tx-name-cell">
+                        <span class="tx-icon-sm">{{ {'Food': '🍔', 'Transport': '🚗', 'Shopping': '🛍️', 'Bills': '⚡', 'Health': '💊', 'Entertainment': '🎬', 'Education': '📚', 'Other': '📦'}.get(t.category, '💸') }}</span>
+                        {{ t.name }}
+                    </div>
+                </td>
+                <td><span class="category-badge cat-{{ t.category|lower }}">{{ t.category }}</span></td>
+                <td>{{ t.date.strftime('%b %d, %Y') }}</td>
+                <td class="note-cell">{{ t.note or '—' }}</td>
+                <td class="amount-cell">-${{ "%.2f"|format(t.amount) }}</td>
+                <td>
+                    <a href="{{ url_for('delete_transaction', id=t.id) }}"
+                       class="delete-btn"
+                       onclick="return confirm('Delete this transaction?')">✕</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state large">
+        <span>💸</span>
+        <p>No transactions found.</p>
+        <button class="btn-primary" onclick="toggleModal('addModal')">Add your first transaction</button>
+    </div>
+    {% endif %}
+</div>
+
+<div id="addModal" class="modal hidden">
+    <div class="modal-overlay" onclick="toggleModal('addModal')"></div>
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Add Transaction</h3>
+            <button class="modal-close" onclick="toggleModal('addModal')">✕</button>
+        </div>
+        <form method="POST" action="{{ url_for('transactions') }}">
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" name="name" placeholder="e.g. Grocery run" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Amount ($) *</label>
+                    <input type="number" name="amount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label>Date *</label>
+                    <input type="date" name="date" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Category *</label>
+                <select name="category" required>
+                    <option value="">Select category</option>
+                    {% for cat in ['Food', 'Transport', 'Shopping', 'Bills', 'Health', 'Entertainment', 'Education', 'Other'] %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Note (optional)</label>
+                <input type="text" name="note" placeholder="Any extra details...">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="toggleModal('addModal')">Cancel</button>
+                <button type="submit" class="btn-primary">Add Transaction</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

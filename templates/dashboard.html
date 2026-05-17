@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Expenzo{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Dashboard</h2>
+        <p class="subtitle">{{ month_name }}</p>
+    </div>
+    <div class="month-nav">
+        {% set prev_month = month - 1 if month > 1 else 12 %}
+        {% set prev_year = year if month > 1 else year - 1 %}
+        {% set next_month = month + 1 if month < 12 else 1 %}
+        {% set next_year = year if month < 12 else year + 1 %}
+        <a href="{{ url_for('dashboard', month=prev_month, year=prev_year) }}" class="month-btn">‹</a>
+        <span>{{ month_name }}</span>
+        <a href="{{ url_for('dashboard', month=next_month, year=next_year) }}" class="month-btn">›</a>
+    </div>
+</div>
+
+<div class="metrics">
+    <div class="metric-card">
+        <div class="metric-label">Total Spent</div>
+        <div class="metric-value">${{ "%.2f"|format(total_spent) }}</div>
+        <div class="metric-sub">This month</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Total Budget</div>
+        <div class="metric-value">${{ "%.2f"|format(total_budget) }}</div>
+        <div class="metric-sub">Set across all categories</div>
+    </div>
+    <div class="metric-card {% if remaining < 0 %}metric-danger{% endif %}">
+        <div class="metric-label">Remaining</div>
+        <div class="metric-value">${{ "%.2f"|format(remaining) }}</div>
+        <div class="metric-sub">{{ 'Over budget!' if remaining < 0 else 'Available to spend' }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Transactions</div>
+        <div class="metric-value">{{ all_count }}</div>
+        <div class="metric-sub">This month</div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3>Spending by Category</h3>
+        </div>
+        {% if categories %}
+            <canvas id="categoryChart" height="220"></canvas>
+            <script>
+                window.categoryData = {{ categories|tojson }};
+            </script>
+        {% else %}
+            <div class="empty-state">No transactions this month</div>
+        {% endif %}
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3>Recent Transactions</h3>
+            <a href="{{ url_for('transactions') }}" class="see-all">See all</a>
+        </div>
+        {% if transactions %}
+            <div class="transaction-list">
+                {% for t in transactions %}
+                <div class="transaction-item">
+                    <div class="tx-icon">
+                        {{ {'Food': '🍔', 'Transport': '🚗', 'Shopping': '🛍️', 'Bills': '⚡', 'Health': '💊', 'Entertainment': '🎬', 'Education': '📚', 'Other': '📦'}.get(t.category, '💸') }}
+                    </div>
+                    <div class="tx-info">
+                        <span class="tx-name">{{ t.name }}</span>
+                        <span class="tx-meta">{{ t.category }} · {{ t.date.strftime('%b %d') }}</span>
+                    </div>
+                    <span class="tx-amount">-${{ "%.2f"|format(t.amount) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">No transactions yet. <a href="{{ url_for('transactions') }}">Add one!</a></div>
+        {% endif %}
+    </div>
+</div>
+
+{% if budget_progress %}
+<div class="card mt">
+    <div class="card-header">
+        <h3>Budget Progress</h3>
+        <a href="{{ url_for('budgets') }}" class="see-all">Manage</a>
+    </div>
+    <div class="budget-list">
+        {% for b in budget_progress %}
+        <div class="budget-row">
+            <div class="budget-info">
+                <span class="budget-cat">{{ b.category }}</span>
+                <span class="budget-amounts">${{ "%.0f"|format(b.spent) }} / ${{ "%.0f"|format(b.budget) }}</span>
+            </div>
+            <div class="budget-bar-track">
+                <div class="budget-bar-fill {% if b.over %}bar-over{% endif %}" style="width: {{ b.pct }}%"></div>
+            </div>
+            <span class="budget-pct {% if b.over %}text-danger{% endif %}">{{ b.pct }}%</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

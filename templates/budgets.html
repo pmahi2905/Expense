@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Budgets — Expenzo{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Budgets</h2>
+        <p class="subtitle">Set monthly limits per category</p>
+    </div>
+    <button class="btn-primary" onclick="toggleModal('addBudgetModal')">+ Set Budget</button>
+</div>
+
+<div class="card">
+    {% if budgets %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Monthly Limit</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in budgets %}
+            <tr>
+                <td>
+                    <div class="tx-name-cell">
+                        <span class="tx-icon-sm">{{ {'Food': '🍔', 'Transport': '🚗', 'Shopping': '🛍️', 'Bills': '⚡', 'Health': '💊', 'Entertainment': '🎬', 'Education': '📚', 'Other': '📦'}.get(b.category, '💸') }}</span>
+                        {{ b.category }}
+                    </div>
+                </td>
+                <td class="amount-cell">${{ "%.2f"|format(b.amount) }}</td>
+                <td>
+                    <a href="{{ url_for('delete_budget', id=b.id) }}"
+                       class="delete-btn"
+                       onclick="return confirm('Delete this budget?')">✕</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state large">
+        <span>🎯</span>
+        <p>No budgets set yet.</p>
+        <button class="btn-primary" onclick="toggleModal('addBudgetModal')">Set your first budget</button>
+    </div>
+    {% endif %}
+</div>
+
+<div id="addBudgetModal" class="modal hidden">
+    <div class="modal-overlay" onclick="toggleModal('addBudgetModal')"></div>
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3>Set Budget</h3>
+            <button class="modal-close" onclick="toggleModal('addBudgetModal')">✕</button>
+        </div>
+        <form method="POST" action="{{ url_for('budgets') }}">
+            <div class="form-group">
+                <label>Category *</label>
+                <select name="category" required>
+                    <option value="">Select category</option>
+                    {% for cat in ['Food', 'Transport', 'Shopping', 'Bills', 'Health', 'Entertainment', 'Education', 'Other'] %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Monthly Limit ($) *</label>
+                <input type="number" name="amount" step="0.01" min="1" placeholder="e.g. 500" required>
+            </div>
+            <p class="form-hint">If a budget for this category already exists, it will be updated.</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="toggleModal('addBudgetModal')">Cancel</button>
+                <button type="submit" class="btn-primary">Save Budget</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
